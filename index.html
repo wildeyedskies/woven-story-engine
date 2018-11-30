@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>The Library</title>
+<style>
+@import url('https://fonts.googleapis.com/css?family=Source+Serif+Pro');
+
+html {
+	background-color: rgb(0, 0, 0);
+	color: rgb(208,208,208);
+	font-family: 'Source Serif Pro', serif;
+}
+
+main {
+	max-width: 40em;
+	margin: auto;
+}
+
+h1 {
+	font-size: 3em;
+}
+	
+
+a {
+	color: rgb(103, 105, 252);
+	cursor: pointer;
+}
+
+p,a {
+	font-size: 1.2em;
+}
+
+.scene {
+	
+}
+</style>
+	</head>
+	<body>
+		<main id="main">
+
+		</main>
+	</body>
+<script>
+const main = `
+<h1>The Library</h1>
+<p>
+This is a test of my custom <a onclick="expand(this, systemDesc, false)">system</a>
+</p>
+<a onclick="navigate(floorOne)">Begin the game</a>
+`
+
+const systemDesc = `
+game engine. It's somewhat based on twine, but focuses on text within a single passage instead of simply linking documents together.
+`
+
+const floorOne = `
+<h1>Floor One</h1>
+<p>Welcome to floor one</p>
+<div class="choices">
+	<a onclick="choice(this, burrito, true)">Eat a Burrito</a>
+	<a onclick="choice(this, minecraft, false)">Play Minecraft</a>
+</div>
+`
+
+const burrito = `
+<p>Chomp Chomp!</p>
+`
+
+const minecraft = `
+<p>You build a cobblestone fortress in the nether. You feel accepted in the nether. Ghasts don't care about gender.</p>
+`
+
+function navigate(template) {
+	document.getElementById("main").innerHTML = template;
+}
+
+function choice(choiceNode, responsePassage, preserveChoiceText) {
+	let choiceText = choiceNode.innerHTML
+	if (preserveChoiceText) 
+		choiceNode.parentNode.outerHTML = `<p>${choiceText}</p>` + responsePassage
+	else choiceNode.parentNode.outerHTML = responsePassage
+}
+
+function expand(linkNode, responsePassage, preserveLinkText) {
+	let linkText = linkNode.innerHTML
+	if (preserveLinkText)
+		linkNode.outerHTML = `<p>${linkText}</p>` + responsePassage
+	else linkNode.outerHTML = responsePassage
+}
+
+function include(node, data) {
+	return node(data)
+}
+
+navigate(main)
+
+</script>
+</html>
