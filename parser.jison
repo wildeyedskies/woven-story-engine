@@ -6,18 +6,18 @@
 
 \n\n                  return 'NEWLINE'
 \n*"{"(\n|\s)*           return '{'
-(\n|\s)*"}"\n*           return '}'
+(\n|\s)*"}"              return '}'
 "\em"\s*                 return 'EM'
 "\bf"\s*                 return 'BF'
 "\section"\s?"("(\w+(","\s?)?)+")"\s*  return 'SECTION'
-"\nav"\s\w+\s?("("(\w+(","\s?)?)+")")?\s* return 'NAVIGATE'
-"\show"\s\w+\s?("("(\w+(","\s?)?)+")")?(\s["true"|"false"])?\s* return 'SHOW'
+"\nav"\s?"("(\w+(","\s?)?)+")"\s* return 'NAVIGATE'
+"\show"\s?"("(\w+(","\s?)?)+")"\s* return 'SHOW'
 "\if"\s[^{\n]+                return 'IF'
 "\else"\s*                    return 'ELSE'
-"\h1"\s*                      return 'H1'
-"\h2"\s*                      return 'H2'
+"\h1"\s*                      return 'HEADING1'
+"\h2"\s*                      return 'HEADING2'
 ([^{}\n\\]+\n?[^{}\n\\]+)+      return 'TEXT'
-<<EOF>>               return 'EOF'
+\s?<<EOF>>               return 'EOF'
 
 /lex
 
@@ -37,8 +37,10 @@ expressions
 file
     : section
         {$$ = $1;}
+    | file 'NEWLINE' section
+        {$$ = $1 + $3;}
     | file section
-        {$$ = $1 + $2}
+        {$$ = $1 + $2;}
     ;
 
 section
@@ -62,10 +64,10 @@ sectionContent
 block
     : paragraph
         {$$ = "<p>" + $1 + "</p>";}
-    | 'HEADING1'
-        {$$ = "<h1>" + $1.substring(2) + "</h1>";}
-    | 'HEADING2'
-        {$$ = "<h2>" + $1.substring(3) + "</h2>";}
+    | 'HEADING1' '{' 'TEXT' '}'
+        {$$ = "<h1>" + $3 + "</h1>";}
+    | 'HEADING2' '{' 'TEXT' '}'
+        {$$ = "<h2>" + $3 + "</h2>";}
     ;
 
 paragraph
