@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const Lexer = require('lex')
+import * as Lexer from 'lex'
 
 let lexer = new Lexer;
 
@@ -47,7 +47,7 @@ lexer.addRule(/\\if\s?\([^\n)]+\)\s*/, (text) => {
 
 lexer.addRule(/\\else\s*/, (text) => {
    //TODO make sure there's an if block before the else
-   lastNode.children.push({type: 'else', condition: condition, children: [], parentNode: lastNode})
+   lastNode.children.push({type: 'else', children: [], parentNode: lastNode})
 })
 
 
@@ -75,15 +75,15 @@ lexer.addRule(/\\bf\s*/, () => {
 })
 
 // Brackets
-lexer.addRule(/(\s|\n)*\{/, () => {
+lexer.addRule(/(\s|\n)*\{\n*/, () => {
    if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
    if (lastNode.type === 'text') throw "Invalid { following text block"
    lastNode = lastNode.children[lastNode.children.length -1]
 })
 
-lexer.addRule(/\}/, () => {
+lexer.addRule(/\}\n*/, () => {
    if (lastNode.type === 'root') "Cannot end block. Your brackets are likely unbalanced"
-   lastNode = lastNode.parentNode
+   lastNode = lastNode['parentNode']
 })
 
 // Text
@@ -96,9 +96,6 @@ lexer.addRule(/[^(\n\n){}]+/, (text) => {
 lexer.addRule(/\n(\n+)/, () => {
    lastNode.children.push({type: 'lineBreak', parentNode: lastNode})
 })
-
-
-let syntaxTree = lexer.setInput('\\section(testSection) {\\h2 {heading 2} }').lex()
 
 // 2 types of processing
 //   1. process node itself
@@ -140,24 +137,36 @@ function processBF(node) {
 function processSection(section) {
   // first let's process each of the child nodes
   let children = section.children.map(n => process(n))
-  // now we need to iterate through them and group them into 
-  
+  // now we need to iterate through them and group them into
+  //TODO actually do this
+  let content = children.join('\n')
   return `function ${section.name}(${section.args.join(',')}) { ${section.variables.join(';')}; return \`${content}\` }`
+}
+
+function processInclude(node) {
+  // we want the template string to execute the included section function when the 
+  // including section's function is called
+  return `\${${node.name}(${node.args.join(',')})}`
 }
 
 function processNav(node) {
   let content = node.children.map(n => process(n)).reduce((acc, n) => acc + n, '')
-  return `<a onclick="navigate(${node.name}(${node.args.join(',')}))">${content}</a>`
+  return `<a onclick="navigate(${node.name}, [${node.args.join(',')}])">${content}</a>`
 }
 
 function processShow(node) {
   let content = node.children.map(n => process(n)).reduce((acc, n) => acc + n, '')
-  return `<a onclick="show(${node.name}(${node.args.join(',')}), node.preserveLinkText)">${content}</a>`
+  return `<a onclick="show(${node.name}, [${node.args.join(',')}], ${node.preserveLinkText})">${content}</a>`
 }
 
 function processRoot(root) {
    return  root.children.map(n => process(n)).reduce((acc, n) => acc + n + '\n', '')
 }
 
-console.log(root.children)
-console.log(process(root))
+export function compile(input: string): string {
+  root = {children: [], type: 'root'}
+  lastNode = root
+
+  let syntaxTree = lexer.setInput(input).lex()
+  return process(root)
+}

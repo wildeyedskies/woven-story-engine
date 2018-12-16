@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-let parser = require("./parser.js").parser
-let fs = require("fs")
-let minify = require('html-minifier').minify;
+import { compile } from './compiler'
+import * as fs from 'fs'
+import { minify } from 'html-minifier'
 
 function main() {
     if (process.argv.length < 2) {
@@ -13,7 +13,7 @@ function main() {
 
     fs.readFile(inputFile, 'utf8', (err,data) => {
         if (err) throw err
-        let output = parser.parse(data)
+        let output = compile(data)
 
         fs.readFile("template.html", 'utf8', (err,template) => {
             if (err) throw err

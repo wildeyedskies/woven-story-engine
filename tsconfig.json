@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "moduleResolution": "Node",
+        "types": ["node"]
+    },
+    "files": [
+        "cli.ts",
+        "compiler.ts"
+    ]
+}

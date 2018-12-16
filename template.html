@@ -74,29 +74,25 @@ p,a {
 <script>
 %%content%%
 
-function navigate(template) {
-    document.getElementById("main").innerHTML = `<div class="scene">` + template + `</div>`;
+function navigate(sectionFunc, sectionArgs) {
+    document.getElementById("main").innerHTML = `<div class="scene">` + sectionFunc.apply(null, sectionArgs) + `</div>`;
 }
 
-function choice(choiceNode, responsePassage, preserveChoiceText) {
+function choice(choiceNode, sectionFunc, sectionArgs, preserveChoiceText) {
 	let choiceText = choiceNode.innerHTML
 	if (preserveChoiceText) 
-		choiceNode.parentNode.outerHTML = `<p>${choiceText}</p>` + responsePassage
-	else choiceNode.parentNode.outerHTML = responsePassage
+		choiceNode.parentNode.outerHTML = `<p>${choiceText}</p>` + sectionFunc.apply(null, sectionArgs)
+	else choiceNode.parentNode.outerHTML = sectionFunc.apply(null, sectionArgs)
 }
 
-function show(linkNode, responsePassage, preserveLinkText) {
+function show(linkNode, sectionFunc, sectionArgs, preserveLinkText) {
 	let linkText = linkNode.innerHTML
 	if (preserveLinkText)
-		linkNode.outerHTML = `<p>${linkText}</p>` + responsePassage
-	else linkNode.outerHTML = responsePassage
+		linkNode.outerHTML = `<p>${linkText}</p>` + sectionFunc.apply(null, sectionArgs)
+	else linkNode.outerHTML = sectionFunc.apply(null, sectionArgs)
 }
 
-function include(node, data) {
-	return node(data)
-}
-
-navigate(main())
+navigate(main, [])
 
 </script>
 </html>
