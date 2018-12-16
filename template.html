@@ -85,7 +85,7 @@ function choice(choiceNode, responsePassage, preserveChoiceText) {
 	else choiceNode.parentNode.outerHTML = responsePassage
 }
 
-function expand(linkNode, responsePassage, preserveLinkText) {
+function show(linkNode, responsePassage, preserveLinkText) {
 	let linkText = linkNode.innerHTML
 	if (preserveLinkText)
 		linkNode.outerHTML = `<p>${linkText}</p>` + responsePassage
