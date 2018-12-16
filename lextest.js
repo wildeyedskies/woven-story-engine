@@ -55,7 +55,7 @@ lexer.addRule(/\}/, () => {
    lastNode = lastNode.parentNode
 })
 
-lexer.addRule(/([^{}\n\\]+\n?[^{}\n\\]+)+/, (text) => {
+lexer.addRule(/[^(\n\n){}]+/, (text) => {
    // text can't have children
    lastNode.children.push({type: 'text', 'text': text, parentNode: lastNode})
 })
@@ -65,7 +65,7 @@ lexer.addRule(/\n(\n+)/, () => {
 })
 
 
-let syntaxTree = lexer.setInput('\\section(testSection) { \\h2 { heading 2 } }').lex()
+let syntaxTree = lexer.setInput('\\section(testSection) {\\h2 {heading 2} }').lex()
 
 // 2 types of processing
 //   1. process node itself
