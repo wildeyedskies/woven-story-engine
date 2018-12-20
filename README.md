@@ -12,7 +12,7 @@ Clone the repo and run `yarn install`
 
 ## TODO
 
-* refactor with typescript
+* [*] refactor with typescript (in progress)
 * if/else processing
 * set tag handle if/else
    * really this is just walking up the tree looking for ifs or elses before you
@@ -24,3 +24,5 @@ Clone the repo and run `yarn install`
   function and not in the arguments section (we'll need some kind of varargs thing
 * input modal function (again this is tricky because we need to have the input take
   before the template function executes.
+* Section processing
+* Choices processing
