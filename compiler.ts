@@ -89,7 +89,7 @@ lexer.addRule(/(\s|\n)*\{\n*/, () => {
 
 lexer.addRule(/\}\n*/, () => {
    if (lastNode instanceof Text) "Cannot end block. Your brackets are likely unbalanced"
-   lastNode = lastNode['parentNode']
+   lastNode = lastNode['parent']
 })
 
 // Text
