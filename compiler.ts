@@ -8,15 +8,32 @@ let lexer = new Lexer;
 
 // Lexer Macro Rules
 
-lexer.addRule(/\\section\s?\([^\n)]+\)\s*/, (text) => {
+lexer.addRule(/[\n\s]*\\section\s?\([^\n)]+\)\s*/, (text) => {
    let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
 
    lastNode.children.push(new Section(args[0], args.slice(1), [], lastNode))
 })
 
-lexer.addRule(/\\set\s?\([^\n)]+\)/, (text) => {
-   // set can't have any children
-   lastNode.children.push(new Text(text.slice(text.indexOf('(') + 1), lastNode))
+lexer.addRule(/\\set\s?\([^\n)]+\)\n*/, (text) => {
+    // grab the body of the set statement
+    let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+
+    // walk up the tree looking for if statements
+    let conditions = []
+    let node: Tag = lastNode
+    for (; !(node instanceof Section); node = node.parent) {
+        if (node instanceof If) conditions.push(node.condition)
+        else if (node instanceof Else) conditions.push(`!(${node.condition})`)
+        else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+    }
+    
+    // if we found some if statements, we need to only set the variable if they are met
+    if (conditions.length > 0) {
+        let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
+        node.variables.push(`if (${condition}) var ${variable}; `)
+    } else {
+        node.variables.push(`let ${variable};`)
+    }
 })
 
 lexer.addRule(/\\nav\s?\([^\n)]+\)\s*/, (text) => {
@@ -29,6 +46,12 @@ lexer.addRule(/\\show\s?\([^\n)]+\)\s*/, (text) => {
    let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
 
    lastNode.children.push(new Show(args[0], args.slice(2), args[1], lastNode))
+})
+
+lexer.addRule(/\\print\s?\([^\n)]+\)\s*/, (text) => {
+   let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+
+   lastNode.children.push(new Print(variable, lastNode))
 })
 
 lexer.addRule(/\\include\s?\([^\n)]+\)\s*/, (text) => {
@@ -81,7 +104,7 @@ lexer.addRule(/\\bf\s*/, () => {
 
 // Brackets
 // NOTE: Brackets do not add a representation to the syntax tree. All they do is shift the lastNode pointer
-lexer.addRule(/(\s|\n)*\{\n*/, () => {
+lexer.addRule(/[\n\s]*\{\n*/, () => {
    if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
    if (lastNode instanceof Text) throw "Invalid { following text block"
    lastNode = lastNode.children[lastNode.children.length -1]
@@ -93,7 +116,7 @@ lexer.addRule(/\}\n*/, () => {
 })
 
 // Text
-lexer.addRule(/[^(\n\n){}]+/, (text) => {
+lexer.addRule(/[^(\n\n){}\\]+/, (text) => {
    // text can't have children
    lastNode.children.push(new Text(text, lastNode))
 })
@@ -181,7 +204,8 @@ class If {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `\${if(${this.condition}) ${content}}`
+        if (content.trim()) return `\${if(${this.condition}) ${content}}`
+        else return ''
     }
 }
 
@@ -192,7 +216,8 @@ class Else {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `\${if(!(${this.condition})) ${content}}`
+        if (content.trim()) return `\${if(!(${this.condition})) ${content}}`
+        else return ''
     }
 }
 
@@ -204,17 +229,14 @@ class Section {
     public children: Tag[] = []
     
     process(): string {
-        // first let's process each of the child nodes
-        let processedChildren = this.children.map(n => n.process())
-        // now we need to iterate through them and group them into
-        //TODO actually do this
-        let paragraphs: string[][] = [[]]; let index = 0
-        processedChildren.forEach((data, index) => { 
-            if (this.children[index] instanceof LineBreak) {
-                index++
-                paragraphs[index] = []
+        // now we need to iterate through the children and group them into paragraphs
+        let paragraphs: string[][] = [[]]; let paragraphIndex = 0
+        this.children.forEach((childNode, index) => {
+            if (childNode instanceof LineBreak) {
+                paragraphIndex++
+                paragraphs[paragraphIndex] = []
             }
-            else paragraphs[index].push(data)
+            else paragraphs[paragraphIndex].push(childNode.process())
         })
         let content = paragraphs.reduce((acc, i) => acc + '<p>' + i.join('').replace('\n', ' ') + '</p>', '')
 
@@ -260,6 +282,16 @@ class Show {
     }
 }
 
+class Print {
+    constructor(public variable: string, public parent: Tag) {}
+
+    public children: Tag[] = null
+
+    process(): string {
+        return `\${${this.variable}}`
+    }
+}
+
 class Choices {
     constructor(public parent: Tag) {}
     
@@ -287,6 +319,6 @@ export function compile(input: string): string {
   root = new Root()
   lastNode = root
 
-  let syntaxTree = lexer.setInput(input).lex()
+  lexer.setInput(input).lex()
   return root.process()
 }
