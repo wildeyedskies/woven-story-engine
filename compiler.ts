@@ -1,5 +1,8 @@
-#!/usr/bin/env node
-
+/**
+ * Take an input string and convert it into a syntax tree
+ * @param input the input file
+ * @return the root tag of the syntax tree
+ */
 function lex(input: string): Tag {
     let root = new Root()
     let lastNode = root
@@ -38,7 +41,15 @@ function lex(input: string): Tag {
     return root
 }
 
+/**
+ * Handles the lexing within a Root node
+ * @param input the input file
+ * @param i current index into the file
+ * @param lastNode the current parent node
+ * @return the new index after parsing the block
+ */
 function lexRoot(input: string, i: number, lastNode: Tag): number {
+    // throw away newlines and spaces
     if (input[i] === '\n' || input[i] === ' ') { return i + 1 }
     else if (input.startsWith('\\section', i)) {
         // what we do if we find a section
@@ -48,10 +59,25 @@ function lexRoot(input: string, i: number, lastNode: Tag): number {
         
         // update our index to after the section text
         return input.indexOf(')', i) + 1
-    } //TODO add other root allowed tags
+    }
+    else if (input.startsWith('\\title', i)) {
+        let title = input.slice(input.indexOf('(', i) + 1, input.indexOf(')', i)); 
+        (lastNode as Root).title = title
+
+        // update our index to after the section text
+        return input.indexOf(')', i) + 1
+    }
     else { throw `Unexpected character ${input[i]}` }
 }
 
+/**
+ * Handles the lexing within a Block node. This is done within the brackets of a
+ * section or command node
+ * @param input the input file
+ * @param i current index into the file
+ * @param lastNode the current parent node
+ * @return the new index after parsing the block
+ */
 function lexBlock(input: string, i: number, lastNode: Tag): number {
     //TODO do we need to do anything to handle 3+ newlines
     if (input[i] === '\n' && input[i+1] === '\n') {
@@ -162,8 +188,10 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
         for (j = i; !(input[j] === '\n' && input[j+1] === '\n') && input[j] !== '\\' && input[j] !== '}'; j++) {
             buffer += input[j]
         }
-
-        lastNode.children.push(new Text(buffer, lastNode))
+       
+        // we don't want to create empty nodes or nodes only containing newlines and spaces
+        if (buffer.match(/^(\n|\s)*$/) === null && buffer !== '')
+            lastNode.children.push(new Text(buffer, lastNode))
         return j
     }
 }
@@ -193,7 +221,7 @@ class LineBreak {
     constructor(public parent: Tag) {}
     
     public children: Tag[] = null
-    process(): string { return '' }
+    process(): string { return '<br/>' }
 }
 
 class H1 {
@@ -272,22 +300,7 @@ class Section {
     public children: Tag[] = []
     
     process(): string {
-        // now we need to iterate through the children and group them into paragraphs
-        let paragraphs: string[][] = [[]]; let paragraphIndex = 0
-        this.children.forEach((childNode, index) => {
-            if (childNode instanceof LineBreak) {
-                paragraphIndex++
-                paragraphs[paragraphIndex] = []
-            }
-            else paragraphs[paragraphIndex].push(childNode.process())
-        })
-        //TODO this needs to be smart about H1 and H2 and include which do not go in <p> tags
-        let content = paragraphs.map(i => i.join('').replace('\n', ' ').trim())
-            .filter(i => i !== '')
-            .reduce((acc, i) => acc + '<p>' + i + '</p>', '')
-        console.log(content)
-        console.log('\n\n')
-
+        let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
         return `function ${this.name}(${this.args.join(',')}) { ${this.variables.join(';')}; return \`${content}\` }`
     }
 }
@@ -326,7 +339,7 @@ class Show {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `<a onclick="show(${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
+        return `<a onclick="show(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
     }
 }
 
@@ -354,8 +367,9 @@ class Choices {
 class Root {
     children: Tag[] = []
     parent: Tag = null
+    title?: string
 
-    process() {
+    process(): string {
         return  this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
     }
 }
@@ -363,8 +377,11 @@ class Root {
 let root = new Root();
 let lastNode = root
 
-export function compile(input: string): string {
+export class Output {
+    constructor(public content: string, public title: string) {}
+}
+
+export function compile(input: string): Output {
   root = lex(input)
-  console.log(root.children[1])
-  return root.process()
+  return new Output(root.process(), root.title)
 }

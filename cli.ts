@@ -17,7 +17,7 @@ function main() {
 
         fs.readFile("template.html", 'utf8', (err,template) => {
             if (err) throw err
-            writeOutput(minifyOutput(template.replace("%%content%%", output)), outputFile)
+            writeOutput(minifyOutput(template.replace("%%content%%", output.content).replace('%%title%%', output.title)), outputFile)
         })
     })
 
