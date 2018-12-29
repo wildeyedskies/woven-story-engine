@@ -1,130 +1,173 @@
 #!/usr/bin/env node
 
-import * as Lexer from 'lex'
+function lex(input: string): Tag {
+    let root = new Root()
+    let lastNode = root
 
-let lexer = new Lexer;
-
-
-
-// Lexer Macro Rules
-
-lexer.addRule(/[\n\s]*\\section\s?\([^\n)]+\)\s*/, (text) => {
-   let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-
-   lastNode.children.push(new Section(args[0], args.slice(1), [], lastNode))
-})
-
-lexer.addRule(/\\set\s?\([^\n)]+\)\n*/, (text) => {
-    // grab the body of the set statement
-    let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-
-    // walk up the tree looking for if statements
-    let conditions = []
-    let node: Tag = lastNode
-    for (; !(node instanceof Section); node = node.parent) {
-        if (node instanceof If) conditions.push(node.condition)
-        else if (node instanceof Else) conditions.push(`!(${node.condition})`)
-        else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+    let i: number = 0;
+    while (i < input.length) {
+        // things that always get handled the same happen here
+        if (input[i] === '{') {
+           if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
+           if (lastNode instanceof Text) throw "Invalid { following text block"
+           lastNode = lastNode.children[lastNode.children.length -1]
+           i++
+        } else if (input[i] === '}') {
+            if (lastNode instanceof Text) "Cannot end block. Your brackets are likely unbalanced"
+            lastNode = lastNode['parent']
+            i++
+        } else {
+            // apply rules based on the type of lastNode
+            //TODO we probably want to do things a little differently for nav/show/if/else, etc
+            i = {
+                    'Root': lexRoot, 
+                    'Section': lexBlock, 
+                    'Navigate': lexBlock,
+                    'Show': lexBlock,
+                    'Include': lexBlock,
+                    'If': lexBlock,
+                    'Else': lexBlock,
+                    'H1': lexBlock,
+                    'H2': lexBlock,
+                    'BF': lexBlock,
+                    'EM': lexBlock,
+                }[lastNode.constructor.name](input, i, lastNode)
+        }
     }
-    
-    // if we found some if statements, we need to only set the variable if they are met
-    if (conditions.length > 0) {
-        let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
-        node.variables.push(`if (${condition}) var ${variable}; `)
+
+    return root
+}
+
+function lexRoot(input: string, i: number, lastNode: Tag): number {
+    if (input[i] === '\n' || input[i] === ' ') { return i + 1 }
+    else if (input.startsWith('\\section', i)) {
+        // what we do if we find a section
+        let text = input.slice(i, input.indexOf(')', i) + 1)
+        let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+        lastNode.children.push(new Section(args[0], args.slice(1), [], lastNode))
+        
+        // update our index to after the section text
+        return input.indexOf(')', i) + 1
+    } //TODO add other root allowed tags
+    else { throw `Unexpected character ${input[i]}` }
+}
+
+function lexBlock(input: string, i: number, lastNode: Tag): number {
+    //TODO do we need to do anything to handle 3+ newlines
+    if (input[i] === '\n' && input[i+1] === '\n') {
+        lastNode.children.push(new LineBreak(lastNode))
+        return i + 2
+    }
+    // handle possible commands
+    if (input[i] === '\\') {
+        if (input.startsWith('\\h1', i)) { lastNode.children.push(new H1(lastNode)) }
+        else if (input.startsWith('\\h2', i)) { lastNode.children.push(new H2(lastNode)) }
+        else if (input.startsWith('\\bf', i)) { lastNode.children.push(new BF(lastNode)) }
+        else if (input.startsWith('\\em', i)) { lastNode.children.push(new EM(lastNode)) }
+        // handle set statements
+        else if (input.startsWith('\\set', i)) {
+            let text = input.slice(i).match(/\\set\s?\([^\n)]+\)/)[0]
+            if (text == null) throw `Invalid \\set expression at ${i}`
+
+            // grab the body of the set statement
+            let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+
+            // walk up the tree looking for if statements
+            let conditions = []
+            let node: Tag = lastNode
+            for (; !(node instanceof Section); node = node.parent) {
+                if (node instanceof If) conditions.push(node.condition)
+                else if (node instanceof Else) conditions.push(`!(${node.condition})`)
+                else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+            }
+            
+            // if we found some if statements, we need to only set the variable if they are met
+            if (conditions.length > 0) {
+                let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
+                node.variables.push(`if (${condition}) ${variable}; `)
+            } else {
+                node.variables.push(`let ${variable};`)
+            }
+            //NOTE we return a different value if we have a set statement because set statements don't have { }
+            return input.indexOf(')',i) + 1
+        }
+        else if (input.startsWith('\\nav', i)) {
+            let text = input.slice(i).match(/\\nav\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\nav expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Navigate(args[0], args.slice(1), lastNode))
+        }
+        else if (input.startsWith('\\show', i)) {
+            let text = input.slice(i).match(/\\show\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\show expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Show(args[0], args.slice(2), args[1] === 'true', lastNode))
+        }
+        else if (input.startsWith('\\print', i)) {
+            let text = input.slice(i).match(/\\print\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\print expression at ${i}`
+
+            let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).trim()
+            lastNode.children.push(new Print(variable, lastNode))
+
+            //NOTE we return a different value if we have a print statement because set statements don't have { }
+            return input.indexOf(')',i) + 1
+        }
+        else if (input.startsWith('\\include', i)) {
+            let text = input.slice(i).match(/\\include\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\include expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Include(args[0], args.slice(1), lastNode))
+        }
+        else if (input.startsWith('\\if', i)) {
+            let text = input.slice(i).match(/\\if\s?\([^\n)]+\)\s*/)[0]
+            let condition = text.slice(text.indexOf('(') + 1, text.indexOf(')'))
+
+            lastNode.children.push(new If(condition, lastNode))
+        }
+        else if (input.startsWith('\\else', i)) {
+            let text = input.slice(i).match(/\\else\s*/)[0]
+
+            // grab the body of the set statement
+            let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+
+            // walk up the tree looking for if statements
+            let conditions = []
+            let node: Tag = lastNode
+            for (; !(node instanceof Section); node = node.parent) {
+                if (node instanceof If) conditions.push(node.condition)
+                else if (node instanceof Else) conditions.push(`!(${node.condition})`)
+                else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+            }
+            
+            // if we found some if statements, we need to only set the variable if they are met
+            if (conditions.length > 0) {
+                let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
+                node.variables.push(`if (${condition}) ${variable}; `)
+            } else {
+                node.variables.push(`let ${variable};`)
+            }
+        }
+
+        // skip to the next open bracket
+        return input.indexOf('{', i)
     } else {
-        node.variables.push(`let ${variable};`)
+        // parse the text, yo
+        let buffer = ''
+        let j = i
+
+        for (j = i; !(input[j] === '\n' && input[j+1] === '\n') && input[j] !== '\\' && input[j] !== '}'; j++) {
+            buffer += input[j]
+        }
+
+        lastNode.children.push(new Text(buffer, lastNode))
+        return j
     }
-})
+}
 
-lexer.addRule(/\\nav\s?\([^\n)]+\)\s*/, (text) => {
-   let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-   
-   lastNode.children.push(new Navigate(args[0], args.slice(1), lastNode))
-})
-
-lexer.addRule(/\\show\s?\([^\n)]+\)\s*/, (text) => {
-   let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-
-   lastNode.children.push(new Show(args[0], args.slice(2), args[1], lastNode))
-})
-
-lexer.addRule(/\\print\s?\([^\n)]+\)\s*/, (text) => {
-   let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-
-   lastNode.children.push(new Print(variable, lastNode))
-})
-
-lexer.addRule(/\\include\s?\([^\n)]+\)\s*/, (text) => {
-   let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-   
-   lastNode.children.push(new Include(args[0], args.slice(1), lastNode))
-})
-
-lexer.addRule(/\\if\s?\([^\n)]+\)\s*/, (text) => {
-   let condition = text.slice(text.indexOf('(') + 1, text.indexOf(')'))
-
-   lastNode.children.push(new If(condition, lastNode))
-})
-
-lexer.addRule(/\\else\s*/, (text) => {
-   //make sure there's an if block before the else
-   let foundIf = false;
-   let condition = null;
-   for (let node of lastNode.children.slice().reverse()) {
-      if (node instanceof If) { foundIf = true; condition = node['condition']; break };
-      if (node instanceof Else) throw 'Cannot have a double else block'
-   }
-   if (!foundIf) throw 'No corresponding if block found for else'
-
-   lastNode.children.push(new Else(condition, lastNode))
-})
-
-lexer.addRule(/\\choices\s*/, (text) => {
-   lastNode.children.push(new Choices(lastNode))
-})
-
-// Text modifiers
-
-lexer.addRule(/\\h1\s*/, () => {
-   lastNode.children.push(new H1(lastNode))
-})
-
-lexer.addRule(/\\h2\s*/, () => {
-   lastNode.children.push(new H2(lastNode))
-})
-
-
-lexer.addRule(/\\em\s*/, () => {
-   lastNode.children.push(new EM(lastNode))
-})
-
-lexer.addRule(/\\bf\s*/, () => {
-   lastNode.children.push(new BF(lastNode))
-})
-
-// Brackets
-// NOTE: Brackets do not add a representation to the syntax tree. All they do is shift the lastNode pointer
-lexer.addRule(/[\n\s]*\{\n*/, () => {
-   if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
-   if (lastNode instanceof Text) throw "Invalid { following text block"
-   lastNode = lastNode.children[lastNode.children.length -1]
-})
-
-lexer.addRule(/\}\n*/, () => {
-   if (lastNode instanceof Text) "Cannot end block. Your brackets are likely unbalanced"
-   lastNode = lastNode['parent']
-})
-
-// Text
-lexer.addRule(/[^(\n\n){}\\]+/, (text) => {
-   // text can't have children
-   lastNode.children.push(new Text(text, lastNode))
-})
-
-// Newline
-lexer.addRule(/\n(\n+)/, () => {
-   lastNode.children.push(new LineBreak(lastNode))
-})
 
 // 2 types of processing
 //   1. process node itself
@@ -238,7 +281,12 @@ class Section {
             }
             else paragraphs[paragraphIndex].push(childNode.process())
         })
-        let content = paragraphs.reduce((acc, i) => acc + '<p>' + i.join('').replace('\n', ' ') + '</p>', '')
+        //TODO this needs to be smart about H1 and H2 and include which do not go in <p> tags
+        let content = paragraphs.map(i => i.join('').replace('\n', ' ').trim())
+            .filter(i => i !== '')
+            .reduce((acc, i) => acc + '<p>' + i + '</p>', '')
+        console.log(content)
+        console.log('\n\n')
 
         return `function ${this.name}(${this.args.join(',')}) { ${this.variables.join(';')}; return \`${content}\` }`
     }
@@ -316,9 +364,7 @@ let root = new Root();
 let lastNode = root
 
 export function compile(input: string): string {
-  root = new Root()
-  lastNode = root
-
-  lexer.setInput(input).lex()
+  root = lex(input)
+  console.log(root.children[1])
   return root.process()
 }

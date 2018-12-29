@@ -17,4 +17,4 @@ Clone the repo and run `yarn install`
 * Choices processing
 * Handle ) in strings
 * Image tag
-* Fix weird newlines around if statements
+* Fix newline handling with text

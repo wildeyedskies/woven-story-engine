@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
         "moduleResolution": "Node",
-        "types": ["node"]
+        "types": ["node"],
+        "lib": ["DOM", "ES6", "DOM.Iterable", "ScriptHost"]
     },
     "files": [
         "cli.ts",
