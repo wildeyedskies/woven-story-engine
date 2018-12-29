@@ -98,6 +98,15 @@ Adds the content of a section into another.
 
 `\include(sectionName[, arguments])`
 
+### Image
+
+Display an image
+
+`\image(url, height, width)`
+
+The url can be a relative or absolute URL. Height and width can be specified as `px` I.E., `200px` or other CSS units. 
+`auto` may also be used I.E., `\image(example.org/image, 200px, auto)`
+
 ### If
 
 Display a block of text under a certain condition. Conditions are evaluated as Javascript, so
@@ -154,6 +163,5 @@ Things feel a little different here
   before the template function executes.
 * Choices processing
 * Handle ) in strings
-* Image tag
 * Style tag
 * Script tag

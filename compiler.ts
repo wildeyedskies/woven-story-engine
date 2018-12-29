@@ -148,6 +148,16 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
             lastNode.children.push(new Include(args[0], args.slice(1), lastNode))
         }
+        else if (input.startsWith('\\image', i)) {
+            let text = input.slice(i).match(/\\image\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\image expression at ${i}`
+            
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Image(args[0], args[1], args[2], lastNode))
+
+            //NOTE we return a different value if we have a print statement because image statements don't have { }
+            return input.indexOf(')',i) + 1
+        }
         else if (input.startsWith('\\if', i)) {
             let text = input.slice(i).match(/\\if\s?\([^\n)]+\)\s*/)[0]
             let condition = text.slice(text.indexOf('(') + 1, text.indexOf(')'))
@@ -350,6 +360,16 @@ class Print {
 
     process(): string {
         return `\${${this.variable}}`
+    }
+}
+
+class Image {
+    constructor(public url: string, private height: string, private width: string, public parent: Tag) {}
+
+    public children: Tag[] = null
+
+    process(): string {
+        return `<img src="${this.url}" style="height: ${this.height}; width: ${this.width};"/>`
     }
 }
 
