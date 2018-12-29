@@ -1,5 +1,7 @@
 # Woven Story Engine
 
+## WARNING: this is alpha quality software. Use at your own peril!
+
 A twine like interactive fiction engine, written for my game The Library
 
 Woven provides a clean syntax somewhat inspired by LaTeX, and a set of neat macros to help you make your
@@ -102,10 +104,10 @@ Adds the content of a section into another.
 
 Display an image
 
-`\image(url, height, width)`
+`\image(url, height, width, alt)`
 
 The url can be a relative or absolute URL. Height and width can be specified as `px` I.E., `200px` or other CSS units. 
-`auto` may also be used I.E., `\image(example.org/image, 200px, auto)`
+`auto` may also be used I.E., `\image(example.org/image, 200px, auto, alt text)`
 
 ### If
 
@@ -165,3 +167,4 @@ Things feel a little different here
 * Handle ) in strings
 * Style tag
 * Script tag
+* use set outside of sections

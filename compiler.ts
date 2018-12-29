@@ -27,7 +27,6 @@ function lex(input: string): Tag {
                     'Section': lexBlock, 
                     'Navigate': lexBlock,
                     'Show': lexBlock,
-                    'Include': lexBlock,
                     'If': lexBlock,
                     'Else': lexBlock,
                     'H1': lexBlock,
@@ -147,13 +146,16 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
 
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
             lastNode.children.push(new Include(args[0], args.slice(1), lastNode))
+
+            //NOTE we return a different value if we have a print statement because image statements don't have { }
+            return input.indexOf(')',i) + 1
         }
         else if (input.startsWith('\\image', i)) {
             let text = input.slice(i).match(/\\image\s?\([^\n)]+\)\s*/)[0]
             if (text == null) throw `Invalid \\image expression at ${i}`
             
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-            lastNode.children.push(new Image(args[0], args[1], args[2], lastNode))
+            lastNode.children.push(new Image(args[0], args[1], args[2], args[3], lastNode))
 
             //NOTE we return a different value if we have a print statement because image statements don't have { }
             return input.indexOf(')',i) + 1
@@ -319,7 +321,7 @@ class Include {
     constructor(public name: string, public args: string[], 
                 public parent: Tag) {}
     
-    public children: Tag[] = []
+    public children: Tag[] = null
 
 
     process(): string {
@@ -364,12 +366,13 @@ class Print {
 }
 
 class Image {
-    constructor(public url: string, private height: string, private width: string, public parent: Tag) {}
+    constructor(public url: string, private height: string, 
+                private width: string, private alt: string, public parent: Tag) {}
 
     public children: Tag[] = null
 
     process(): string {
-        return `<img src="${this.url}" style="height: ${this.height}; width: ${this.width};"/>`
+        return `<img src="${this.url}" alt="${this.alt}" style="height: ${this.height}; width: ${this.width};"/>`
     }
 }
 
@@ -403,5 +406,5 @@ export class Output {
 
 export function compile(input: string): Output {
   root = lex(input)
-  return new Output(root.process(), root.title)
+  return new Output(root.process(), root.title || '')
 }
