@@ -89,6 +89,7 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
         else if (input.startsWith('\\h2', i)) { lastNode.children.push(new H2(lastNode)) }
         else if (input.startsWith('\\bf', i)) { lastNode.children.push(new BF(lastNode)) }
         else if (input.startsWith('\\em', i)) { lastNode.children.push(new EM(lastNode)) }
+        else if (input.startsWith('\\choices', i)) { lastNode.children.push(new Choices(lastNode)) }
         // handle set statements
         else if (input.startsWith('\\set', i)) {
             let text = input.slice(i).match(/\\set\s?\([^\n)]+\)/)[0]
@@ -111,7 +112,7 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
                 let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
                 node.variables.push(`if (${condition}) ${variable}; `)
             } else {
-                node.variables.push(`let ${variable};`)
+                node.variables.push(`${variable};`)
             }
             //NOTE we return a different value if we have a set statement because set statements don't have { }
             return input.indexOf(')',i) + 1
@@ -287,7 +288,7 @@ class If {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        if (content.trim()) return `\${if(${this.condition}) ${content}}`
+        if (content.trim()) return `\${${this.condition} ? \`${content}\` : \"\"}`
         else return ''
     }
 }
@@ -299,7 +300,7 @@ class Else {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        if (content.trim()) return `\${if(!(${this.condition})) ${content}}`
+        if (content.trim()) return `\${${this.condition} ? \`${content}\` : ""}`
         else return ''
     }
 }
@@ -385,6 +386,19 @@ class Choices {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
         return `<div class="choices">${content}</div>`
     }
+}
+
+class Choice {
+    constructor(public name: string, public args: string[], public preserveLinkText: boolean, 
+                public parent: Tag) {}
+
+    public children: Tag[] = []
+
+    process(): string {
+        let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
+        return `<a onclick="choice(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
+    }
+
 }
 
 class Root {
