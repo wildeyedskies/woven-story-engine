@@ -2,7 +2,7 @@
     "compilerOptions": {
         "moduleResolution": "Node",
         "types": ["node"],
-        "lib": ["DOM", "ES6", "DOM.Iterable", "ScriptHost"]
+        "lib": ["DOM", "ES6", "ES2017", "DOM.Iterable", "ScriptHost"]
     },
     "files": [
         "cli.ts",

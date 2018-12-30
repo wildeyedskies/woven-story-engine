@@ -80,7 +80,7 @@ refreshes the page. Variables are interpreted by the page Javascript so text mus
 
 `\set(variableName = value)`
 
-### Example
+#### Example
 
 ```
 \set(name = 'Joey')
@@ -133,7 +133,26 @@ Display a block if a condition is not true. An else macro must follow a correspo
 
 ### Choices
 
-This macro is not implemented yet.
+The choices macro allows you to provide the user with a set of choices, only one of which may be selected.
+
+`\choices { \choice(section, preserveLinkText[, arguments) { Choice text } }`
+
+A choices block may contain any number `\choice` macros. The `\choice` macro is nearly identical in function to 
+the `\show` macro. The only difference is that when a choice is clicked the other choices disappear. `preserveLinkText`
+determines whether the choice text will remain visible when a choice is clicked. Valid values are `true` and `false`.
+
+#### Example
+
+```
+\section(main) {
+\choices {
+\choice(win, false) { Pick heads }
+\choice(lose, false) { Pick tails }
+}}
+
+\section(win) { You win! }
+\section(lose) { You lose! }
+```
 
 ## Example story
 
@@ -163,7 +182,6 @@ Things feel a little different here
 
 * input modal function (again this is tricky because we need to have the input take
   before the template function executes.
-* Choices processing
 * Handle ) in strings
 * Style tag
 * Script tag

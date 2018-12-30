@@ -12,7 +12,7 @@ function lex(input: string): Tag {
         // things that always get handled the same happen here
         if (input[i] === '{') {
            if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
-           if (lastNode instanceof Text) throw "Invalid { following text block"
+           if (lastNode.children[lastNode.children.length -1].children == null) throw "Invalid { following a terminal symbol"
            lastNode = lastNode.children[lastNode.children.length -1]
            i++
         } else if (input[i] === '}') {
@@ -21,11 +21,12 @@ function lex(input: string): Tag {
             i++
         } else {
             // apply rules based on the type of lastNode
-            //TODO we probably want to do things a little differently for nav/show/if/else, etc
-            i = {
+            let lexmap = {
                     'Root': lexRoot, 
                     'Section': lexBlock, 
                     'Navigate': lexBlock,
+                    'Choices': lexChoices,
+                    'Choice': lexBlock,
                     'Show': lexBlock,
                     'If': lexBlock,
                     'Else': lexBlock,
@@ -33,11 +34,30 @@ function lex(input: string): Tag {
                     'H2': lexBlock,
                     'BF': lexBlock,
                     'EM': lexBlock,
-                }[lastNode.constructor.name](input, i, lastNode)
+            }
+
+            if (!Object.keys(lexmap).includes(lastNode.constructor.name)) throw `Cannot add block after ${lastNode.constructor.name}`
+            i = lexmap[lastNode.constructor.name](input, i, lastNode)
         }
     }
 
     return root
+}
+
+function lexChoices(input: string, i: number, lastNode: Tag): number {
+    // throw away newlines and spaces
+    if (input[i] === '\n' || input[i] === ' ') { return i + 1 }
+    else if (input.startsWith('\\choice', i)) {
+        let text = input.slice(i).match(/\\choice\s?\([^\n)]+\)\s*/)[0]
+        if (text == null) throw `Invalid \\choice expression at ${i}`
+
+        let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+        lastNode.children.push(new Choice(args[0], args.slice(2), args[1] === 'true', lastNode))
+
+        // skip to the next open bracket
+        return input.indexOf('{', i)
+    }
+    else throw "Invalid text within choices block."
 }
 
 /**
@@ -190,6 +210,7 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
                 node.variables.push(`let ${variable};`)
             }
         }
+        else throw `Invalid command`
 
         // skip to the next open bracket
         return input.indexOf('{', i)
@@ -288,11 +309,13 @@ class If {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        if (content.trim()) return `\${${this.condition} ? \`${content}\` : \"\"}`
+        if (content.trim()) return `\${${this.condition} ? \`${content}\` : ""}`
         else return ''
     }
 }
 
+// TODO using a second turnary for else doesn't make sense. We should append to the corresponding if
+// Else probably shouldn't even be a node type
 class Else {
     constructor(public condition: string, public parent: Tag) {}
     
