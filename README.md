@@ -76,7 +76,12 @@ on screen when the link is clicked. Valid values for preserveLinkText are `true`
 ### Set
 
 Set a variable. Variables in Woven are global by default meaning they are persistent throughout the story until the user
-refreshes the page. Variables are interpreted by the page Javascript so text must be enclosed in quotes like so `text`.
+refreshes the page. Variables are interpreted by the page Javascript so text must be enclosed in quotes like so `text`. 
+When a set macro is used within a `\section` block, it will execute when that section is visited. If `\set` is called 
+outside of a section it will be called when the story is loaded.
+
+Note: Inside sections you can place `\set` statements within `\if` or `\else` blocks. The variable will only be set if 
+the conditions of the if or else are met.
 
 `\set(variableName = value)`
 
@@ -185,4 +190,3 @@ Things feel a little different here
 * Handle ) in strings
 * Style tag
 * Script tag
-* use set outside of sections

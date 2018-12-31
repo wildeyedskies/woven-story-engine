@@ -60,6 +60,10 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
     else throw "Invalid text within choices block."
 }
 
+/*function lexStyle(input: string, i: number, lastNode: Tag): number {
+    input.slice(i).match(
+}*/
+
 /**
  * Handles the lexing within a Root node
  * @param input the input file
@@ -85,6 +89,24 @@ function lexRoot(input: string, i: number, lastNode: Tag): number {
 
         // update our index to after the section text
         return input.indexOf(')', i) + 1
+    }
+    else if (input.startsWith('\\set', i)) {
+        let text = input.slice(i).match(/\\set\s?\([^\n)]+\)/)[0]
+        if (text == null) throw `Invalid \\set expression at ${i}`
+
+        // grab the body of the set statement
+        let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+
+        // doesn't really make sense to do if/else in the root section
+        // so we won't check for it
+
+        if (!(lastNode instanceof Root)) 
+            throw "lexRoot function called on non root node. Check your syntax and brackets.";
+        
+        (lastNode as Root).variables.push(`${variable};`)
+        
+        //NOTE we return a different value if we have a set statement because set statements don't have { }
+        return input.indexOf(')',i) + 1
     }
     else { throw `Unexpected character ${input[i]}` }
 }
@@ -123,8 +145,7 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             let node: Tag = lastNode
             for (; !(node instanceof Section); node = node.parent) {
                 if (node instanceof If) conditions.push(node.condition)
-                else if (node instanceof Else) conditions.push(`!(${node.condition})`)
-                else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+                else if (node instanceof Else) conditions.push(`!(${node.iftag.condition})`)
             }
             
             // if we found some if statements, we need to only set the variable if they are met
@@ -189,26 +210,21 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
         }
         else if (input.startsWith('\\else', i)) {
             let text = input.slice(i).match(/\\else\s*/)[0]
-
-            // grab the body of the set statement
-            let variable = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-
-            // walk up the tree looking for if statements
-            let conditions = []
-            let node: Tag = lastNode
-            for (; !(node instanceof Section); node = node.parent) {
-                if (node instanceof If) conditions.push(node.condition)
-                else if (node instanceof Else) conditions.push(`!(${node.condition})`)
-                else if (node instanceof Root) throw "Cannot set variable outside a section. Not yet anyway"
+            
+            let foundIf = false
+            for (let j = lastNode.children.length - 1; j >= 0; j--) {
+                let node = lastNode.children[j]
+                if (node instanceof Else) throw "Found double else block";
+                if (node instanceof If) {
+                    let elseBlock = new Else(node, lastNode)
+                    lastNode.children.push(elseBlock)
+                    node.elseBlock
+                    foundIf = true
+                    break
+                }
             }
             
-            // if we found some if statements, we need to only set the variable if they are met
-            if (conditions.length > 0) {
-                let condition = conditions[0] + conditions.slice(1).reduce((acc, c) => acc + ' && ' + c , '')
-                node.variables.push(`if (${condition}) ${variable}; `)
-            } else {
-                node.variables.push(`let ${variable};`)
-            }
+            if (!foundIf) throw "Found else block with no If block"
         }
         else throw `Invalid command`
 
@@ -298,7 +314,7 @@ class BF {
 
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `<bf>${content}</bf>`
+        return `<strong>${content}</strong>`
     }
 }
 
@@ -306,26 +322,27 @@ class If {
     constructor(public condition: string, public parent: Tag) {}
     
     public children: Tag[] = []
+    public elseBlock?: Else = null
 
     process(): string {
+        let elseContent = ''
+        if (this.elseBlock !== null)
+            elseContent = this.elseBlock.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
+
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        if (content.trim()) return `\${${this.condition} ? \`${content}\` : ""}`
+        if (content.trim()) return `\${${this.condition} ? \`${content}\` : \`${elseContent}\`}`
         else return ''
     }
 }
 
-// TODO using a second turnary for else doesn't make sense. We should append to the corresponding if
-// Else probably shouldn't even be a node type
+// The else block doesn't really do anything but hold children
+// The If class looks ahead to find else content and process it
 class Else {
-    constructor(public condition: string, public parent: Tag) {}
+    constructor(public iftag: If, public parent: Tag) {}
     
     public children: Tag[] = []
 
-    process(): string {
-        let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        if (content.trim()) return `\${${this.condition} ? \`${content}\` : ""}`
-        else return ''
-    }
+    process(): string { return '' }
 }
 
 
@@ -428,9 +445,10 @@ class Root {
     children: Tag[] = []
     parent: Tag = null
     title?: string
+    variables?: string[] = []
 
     process(): string {
-        return  this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
+        return this.variables.join(';') + ';' + this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
     }
 }
 
