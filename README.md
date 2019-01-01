@@ -159,6 +159,35 @@ determines whether the choice text will remain visible when a choice is clicked.
 \section(lose) { You lose! }
 ```
 
+### Input
+
+The `\input` macro takes input from the player and assigns it to a variable.
+
+`\input(type, variable[, placeholder])`
+
+The input type parameter determines the input type. This can be any HTML5 input type; however, for most uses
+`text` or `number` will probably be what you want to use. `variable` determines the name of the variable the
+output will be set to, and optionally placeholder determines text that will be shown as a placeholder when the 
+input box is empty.
+
+Note: variable updates do not take effect on sections that are already visible. They only effect new sections 
+as they are displayed.
+
+#### Example
+
+```
+\section(main) {
+\input(text, textVariable, enter some text)
+
+\nav(sectionTwo) { onwards }
+}
+
+\section(sectionTwo) { \print(testVariable) }
+```
+
+In this example, the text the user entered into the input box will be displayed when the click *onwards* and sectionTwo 
+is displayed.
+
 ### Style
 
 You can add custom styling to your stories with `\style`.
@@ -195,10 +224,6 @@ console.log('hello world!')
 
 This example will cause *hell world* to be printed to the JavaScript console.
 
-### Script
-
-
-
 ## Example story
 
 ```
@@ -222,9 +247,3 @@ cool, soft and rad
 Things feel a little different here
 }
 ```
-
-## TODO
-
-* input modal function (again this is tricky because we need to have the input take
-  before the template function executes.
-* Handle ) in commands

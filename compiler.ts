@@ -226,7 +226,17 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
             lastNode.children.push(new Include(args[0], args.slice(1), lastNode))
 
-            //NOTE we return a different value if we have a print statement because image statements don't have { }
+            //NOTE we return a different value if we have a include statement because image statements don't have { }
+            return input.indexOf(')',i) + 1
+        }
+        else if (input.startsWith('\\input', i)) {
+            let text = input.slice(i).match(/\\input\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\input expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Input(args[0], args[1], (args.length > 2 ? args[2] : ''), lastNode))
+
+            //NOTE we return a different value if we have a input statement because image statements don't have { }
             return input.indexOf(')',i) + 1
         }
         else if (input.startsWith('\\image', i)) {
@@ -407,39 +417,39 @@ class Section {
 class Include {
     constructor(public name: string, public args: string[], 
                 public parent: Tag) {}
-    
-    public children: Tag[] = null
+
+                public children: Tag[] = null
 
 
-    process(): string {
-        // we want the template string to execute the included section function when the 
-        // including section's function is called
-        return `\${${this.name}(${this.args.join(',')})}`
-    }
+                process(): string {
+                    // we want the template string to execute the included section function when the 
+                    // including section's function is called
+                    return `\${${this.name}(${this.args.join(',')})}`
+                }
 }
 
 class Navigate {
     constructor(public name: string, public args: string[], 
                 public parent: Tag) {}
 
-    public children: Tag[] = []
+                public children: Tag[] = []
 
-    process(): string {
-      let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-      return `<a onclick="navigate(${this.name}, [${this.args.join(',')}])">${content}</a>`
-    }
+                process(): string {
+                    let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
+                    return `<a onclick="navigate(${this.name}, [${this.args.join(',')}])">${content}</a>`
+                }
 }
 
 class Show {
     constructor(public name: string, public args: string[], public preserveLinkText: boolean, 
                 public parent: Tag) {}
 
-    public children: Tag[] = []
+                public children: Tag[] = []
 
-    process(): string {
-        let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `<a onclick="show(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
-    }
+                process(): string {
+                    let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
+                    return `<a onclick="show(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
+                }
 }
 
 class Print {
@@ -456,10 +466,21 @@ class Image {
     constructor(public url: string, private height: string, 
                 private width: string, private alt: string, public parent: Tag) {}
 
+                public children: Tag[] = null
+
+                process(): string {
+                    return `<img src="${this.url}" alt="${this.alt}" style="height: ${this.height}; width: ${this.width};"/>`
+                }
+}
+
+class Input {
+    constructor(private type: string, private variableName: string, 
+                private placeHolder: string, public parent: Tag) {}
+    
     public children: Tag[] = null
 
     process(): string {
-        return `<img src="${this.url}" alt="${this.alt}" style="height: ${this.height}; width: ${this.width};"/>`
+        return `<input onkeyup="${this.variableName} = this.value" type="${this.type}" placeholder="${this.placeHolder}"`
     }
 }
 

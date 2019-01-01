@@ -42,6 +42,38 @@ br {
     margin: .5rem 0;
 }
 
+input {
+    display: block;
+    margin: .8rem 0;
+    background-color: black;
+    padding: .45rem;
+    border: 2px solid #D4D4D4;
+    border-radius: 5px;
+    color: white;
+}
+
+::-webkit-input-placeholder { /* WebKit, Blink, Edge */
+    color:    #717171;
+}
+:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+   color:    #717171;
+   opacity:  1;
+}
+::-moz-placeholder { /* Mozilla Firefox 19+ */
+   color:    #717171;
+   opacity:  1;
+}
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+   color:    #717171;
+}
+::-ms-input-placeholder { /* Microsoft Edge */
+   color:    #717171;
+}
+
+::placeholder { /* Most modern browsers support this now. */
+   color:   #717171;
+}
+
 .choices a {
     display: block;
 }
