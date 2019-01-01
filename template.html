@@ -136,7 +136,7 @@ function choice(choiceNode, sectionFunc, sectionArgs, preserveChoiceText) {
 function show(linkNode, sectionFunc, sectionArgs, preserveLinkText) {
 	let linkText = linkNode.innerHTML
 	if (preserveLinkText)
-		linkNode.outerHTML = `<p>${linkText}</p>` + sectionFunc.apply(null, sectionArgs)
+            linkNode.outerHTML = `${linkText}<br>` + sectionFunc.apply(null, sectionArgs)
 	else linkNode.outerHTML = sectionFunc.apply(null, sectionArgs)
 }
 
