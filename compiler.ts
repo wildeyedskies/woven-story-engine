@@ -255,7 +255,6 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
                 if (node instanceof If) {
                     let elseBlock = new Else(node, lastNode)
                     lastNode.children.push(elseBlock)
-                    node.elseBlock
                     foundIf = true
                     break
                 }
@@ -375,7 +374,9 @@ class If {
 // The else block doesn't really do anything but hold children
 // The If class looks ahead to find else content and process it
 class Else {
-    constructor(public iftag: If, public parent: Tag) {}
+    constructor(public iftag: If, public parent: Tag) {
+        iftag.elseBlock = this
+    }
     
     public children: Tag[] = []
 
