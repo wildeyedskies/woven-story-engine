@@ -108,6 +108,12 @@ function show(linkNode, sectionFunc, sectionArgs, preserveLinkText) {
 	else linkNode.outerHTML = sectionFunc.apply(null, sectionArgs)
 }
 
+function addStyle(style) {
+    let e = document.createElement('style')
+    e.innerHTML = style
+    document.getElementsByTagName('head')[0].appendChild(e)
+}
+
 navigate(main, [])
 
 </script>

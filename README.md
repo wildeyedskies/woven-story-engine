@@ -159,6 +159,46 @@ determines whether the choice text will remain visible when a choice is clicked.
 \section(lose) { You lose! }
 ```
 
+### Style
+
+You can add custom styling to your stories with `\style`.
+
+`\style { CSS code }`
+
+When used within a section, `\style` will only change the CSS for as long as that section is visible. When used outside 
+a section, the CSS will be persistent throughout the story.
+
+#### Example
+
+```
+\style {
+h1 { color: blue; }
+}
+```
+
+This example will turn header text blue.
+
+### Script
+
+With `\script` you can add custom JavaScript code to your stories. When used within a section, the code will run when the 
+section becomes visible. Using `\script` outside of a section block will cause the code to be run when the game is loaded.
+
+`\script { JS code }`
+
+#### Example
+
+```
+\script {
+console.log('hello world!')
+}
+```
+
+This example will cause *hell world* to be printed to the JavaScript console.
+
+### Script
+
+
+
 ## Example story
 
 ```
@@ -187,6 +227,4 @@ Things feel a little different here
 
 * input modal function (again this is tricky because we need to have the input take
   before the template function executes.
-* Handle ) in strings
-* Style tag
-* Script tag
+* Handle ) in commands

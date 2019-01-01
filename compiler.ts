@@ -60,9 +60,6 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
     else throw "Invalid text within choices block."
 }
 
-/*function lexStyle(input: string, i: number, lastNode: Tag): number {
-    input.slice(i).match(
-}*/
 
 /**
  * Handles the lexing within a Root node
@@ -108,7 +105,44 @@ function lexRoot(input: string, i: number, lastNode: Tag): number {
         //NOTE we return a different value if we have a set statement because set statements don't have { }
         return input.indexOf(')',i) + 1
     }
+    else if (input.startsWith('\\script', i)) { return lexScript(input, i, lastNode) }
+    else if (input.startsWith('\\style', i)) { return lexStyle(input, i, lastNode) }
     else { throw `Unexpected character ${input[i]}` }
+}
+
+function lexScript(input: string, i: number, lastNode: Tag): number {
+    let script;
+    [i, script] = lexScriptOrStyle(input, i)
+    if (lastNode instanceof Section || lastNode instanceof Root)
+        lastNode.script.push(script)
+    else throw `Cannot add script within node ${lastNode.constructor.name}`
+    return i
+}
+
+function lexStyle(input: string, i: number, lastNode: Tag): number {
+    let [j, style] = lexScriptOrStyle(input, i)
+    if (lastNode instanceof Section || lastNode instanceof Root)
+        lastNode.style.push(style)
+    else throw `Cannot add style within node ${lastNode.constructor.name}`
+    return j
+}
+
+
+function lexScriptOrStyle(input: string, i: number): [number, string] {
+    i = input.indexOf('{', i) + 1
+    let buffer = ''
+    let bracket = 1
+
+    for (; bracket > 0; i++) {
+        if (input[i] === '{') bracket++;
+        else if (input[i] === '}') bracket--;
+        buffer += input[i]
+    }
+
+    // chop off the last bracket
+    buffer = buffer.slice(0, buffer.length - 1)
+
+    return [i, buffer]
 }
 
 /**
@@ -132,6 +166,9 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
         else if (input.startsWith('\\bf', i)) { lastNode.children.push(new BF(lastNode)) }
         else if (input.startsWith('\\em', i)) { lastNode.children.push(new EM(lastNode)) }
         else if (input.startsWith('\\choices', i)) { lastNode.children.push(new Choices(lastNode)) }
+        // script and style are special because they update i themselves
+        else if (input.startsWith('\\script', i)) { return lexScript(input, i, lastNode) }
+        else if (input.startsWith('\\style', i)) { return lexStyle(input, i, lastNode) }
         // handle set statements
         else if (input.startsWith('\\set', i)) {
             let text = input.slice(i).match(/\\set\s?\([^\n)]+\)/)[0]
@@ -351,10 +388,18 @@ class Section {
                 public variables: string[], public parent: Tag) {}
     
     public children: Tag[] = []
+    public style?: string[] = []
+    public script?: string[] = []
     
     process(): string {
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
-        return `function ${this.name}(${this.args.join(',')}) { ${this.variables.join(';')}; return \`${content}\` }`
+        let styleCode = ''
+        if (this.style.length > 0) {
+            let style = this.style.filter(s => s !== '').join('').replace(/\n/g, '')
+            styleCode = `<style type="text/css">${style}</style>`
+        }
+        return `function ${this.name}(${this.args.join(',')}) { ${this.script.join(';')}; 
+            ${this.variables.join(';')}; return \`${styleCode}${content}\` }`
     }
 }
 
@@ -445,10 +490,18 @@ class Root {
     children: Tag[] = []
     parent: Tag = null
     title?: string
-    variables?: string[] = []
+    public variables?: string[] = []
+    public style?: string[] = []
+    public script?: string[] = []
 
     process(): string {
-        return this.variables.join(';') + ';' + this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
+        let stylecode = ''
+        if (this.style.length > 0) {
+            let style = this.style.filter(s => s !== '').join('').replace(/\n/g, '')
+            stylecode = `addStyle('${style}')`
+        }
+        return this.variables.join(';') + ';' + this.script.join(';') + ';' + stylecode + ';' +
+            this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
     }
 }
 
