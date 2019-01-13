@@ -1,0 +1,14 @@
+{
+  "name": "libraryengine",
+  "version": "1.0.0",
+  "description": "A twine like compiler for making story games",
+  "main": "compiler.js",
+  "repository": "git@git.mcxa.org:ianmcxa/libraryengine.git",
+  "author": "Zoe Griffin <zoenb@mailbox.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^10.12.15",
+    "html-minifier": "^3.5.21",
+    "uglify-js": "^3.4.9"
+  }
+}
