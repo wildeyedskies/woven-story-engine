@@ -47,6 +47,26 @@ function lex(input: string): Tag {
 function lexChoices(input: string, i: number, lastNode: Tag): number {
     // throw away newlines and spaces
     if (input[i] === '\n' || input[i] === ' ') { return i + 1 }
+    else if (input.startsWith('\\choice-reveal', i)) {
+        let text = input.slice(i).match(/\\choice-reveal\s?\([^\n)]+\)\s*/)[0]
+        if (text == null) throw `Invalid \\choice expression at ${i}`
+
+        let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+        lastNode.children.push(new Choice(args[0], args.slice(2), true, lastNode))
+
+        // skip to the next open bracket
+        return input.indexOf('{', i)
+    }
+    else if (input.startsWith('\\choice-replace', i)) {
+        let text = input.slice(i).match(/\\choice-replace\s?\([^\n)]+\)\s*/)[0]
+        if (text == null) throw `Invalid \\choice expression at ${i}`
+
+        let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+        lastNode.children.push(new Choice(args[0], args.slice(2), false, lastNode))
+
+        // skip to the next open bracket
+        return input.indexOf('{', i)
+    }
     else if (input.startsWith('\\choice', i)) {
         let text = input.slice(i).match(/\\choice\s?\([^\n)]+\)\s*/)[0]
         if (text == null) throw `Invalid \\choice expression at ${i}`
@@ -57,6 +77,7 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
         // skip to the next open bracket
         return input.indexOf('{', i)
     }
+
     else throw "Invalid text within choices block."
 }
 
@@ -202,6 +223,20 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
             lastNode.children.push(new Navigate(args[0], args.slice(1), lastNode))
         }
+        else if (input.startsWith('\\show-reveal', i)) {
+            let text = input.slice(i).match(/\\show-reveal\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\show-reveal expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Show(args[0], args.slice(2), true, lastNode))
+        }
+        else if (input.startsWith('\\show-replace', i)) {
+            let text = input.slice(i).match(/\\show-replace\s?\([^\n)]+\)\s*/)[0]
+            if (text == null) throw `Invalid \\show expression at ${i}`
+
+            let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+            lastNode.children.push(new Show(args[0], args.slice(2), false, lastNode))
+        }
         else if (input.startsWith('\\show', i)) {
             let text = input.slice(i).match(/\\show\s?\([^\n)]+\)\s*/)[0]
             if (text == null) throw `Invalid \\show expression at ${i}`
@@ -272,7 +307,7 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             
             if (!foundIf) throw "Found else block with no If block"
         }
-        else throw `Invalid command`
+        else throw `Invalid command ${input.slice(i, Math.min(input.indexOf('\n', i), input.indexOf(' ', i)))}`
 
         // skip to the next open bracket
         return input.indexOf('{', i)

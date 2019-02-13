@@ -68,10 +68,12 @@ Navigate to a new section I.E., replace what is currently on the screen.
 
 ### Show
 
-Add the contents of a section to the existing section. preserveLinkText determines whether the link text remains
-on screen when the link is clicked. Valid values for preserveLinkText are `true` and `false`.
+Showing a section adds it to the currently visible text. There are two show macros. `\show-reveal` which appends
+the linked section below the link text, and `\show-replace` which replaces the link text with the section.
 
-`\show(sectionName, preserveLinkText[, arguments]) { link text }`
+`\show-reveal(sectionName[, arguments]) { link text }`
+
+`\show-replace(sectionName[, arguments]) { link text }`
 
 ### Set
 
@@ -140,19 +142,18 @@ Display a block if a condition is not true. An else macro must follow a correspo
 
 The choices macro allows you to provide the user with a set of choices, only one of which may be selected.
 
-`\choices { \choice(section, preserveLinkText[, arguments) { Choice text } }`
+`\choices { \choice-reveal(section[, arguments) { Choice text } }`
 
-A choices block may contain any number `\choice` macros. The `\choice` macro is nearly identical in function to 
-the `\show` macro. The only difference is that when a choice is clicked the other choices disappear. `preserveLinkText`
-determines whether the choice text will remain visible when a choice is clicked. Valid values are `true` and `false`.
+A choices block may contain any number `\choice-reveal` and `\choice-replace` macros. These macros are nearly identical 
+to`\show-reveal` and `\show-replace`. The only difference is that when a choice is clicked the other choices disappear.
 
 #### Example
 
 ```
 \section(main) {
 \choices {
-\choice(win, false) { Pick heads }
-\choice(lose, false) { Pick tails }
+\choice-reveal(win) { Pick heads }
+\choice-replace(lose) { Pick tails }
 }}
 
 \section(win) { You win! }
