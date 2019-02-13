@@ -233,7 +233,7 @@ This example will cause *hell world* to be printed to the JavaScript console.
 \section(main) {
 \h1 { Welcome to Woven! }
 
-Woven is a \show(coolSection, false) { cool } interactive fiction engine.
+Woven is a \show-replace(coolSection) { cool } interactive fiction engine.
 
 \nav(nextPage) { Turn the page }
 }
