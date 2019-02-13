@@ -52,7 +52,7 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
         if (text == null) throw `Invalid \\choice expression at ${i}`
 
         let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-        lastNode.children.push(new Choice(args[0], args.slice(2), true, lastNode))
+        lastNode.children.push(new Choice(args[0], args.slice(1), true, lastNode))
 
         // skip to the next open bracket
         return input.indexOf('{', i)
@@ -62,7 +62,7 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
         if (text == null) throw `Invalid \\choice expression at ${i}`
 
         let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-        lastNode.children.push(new Choice(args[0], args.slice(2), false, lastNode))
+        lastNode.children.push(new Choice(args[0], args.slice(1), false, lastNode))
 
         // skip to the next open bracket
         return input.indexOf('{', i)
@@ -228,14 +228,14 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
             if (text == null) throw `Invalid \\show-reveal expression at ${i}`
 
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-            lastNode.children.push(new Show(args[0], args.slice(2), true, lastNode))
+            lastNode.children.push(new Show(args[0], args.slice(1), true, lastNode))
         }
         else if (input.startsWith('\\show-replace', i)) {
             let text = input.slice(i).match(/\\show-replace\s?\([^\n)]+\)\s*/)[0]
             if (text == null) throw `Invalid \\show expression at ${i}`
 
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
-            lastNode.children.push(new Show(args[0], args.slice(2), false, lastNode))
+            lastNode.children.push(new Show(args[0], args.slice(1), false, lastNode))
         }
         else if (input.startsWith('\\show', i)) {
             let text = input.slice(i).match(/\\show\s?\([^\n)]+\)\s*/)[0]
