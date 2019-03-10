@@ -144,8 +144,9 @@ The choices macro allows you to provide the user with a set of choices, only one
 
 `\choices { \choice-reveal(section[, arguments) { Choice text } }`
 
-A choices block may contain any number `\choice-reveal` and `\choice-replace` macros. These macros are nearly identical 
-to`\show-reveal` and `\show-replace`. The only difference is that when a choice is clicked the other choices disappear.
+A choices block may contain any number `\choice-reveal`, `\choice-replace` and `\choice-nav` macros. These
+macros are nearly identical to`\show-reveal`, `\show-replace` and `\nav`. The only difference is that when
+a choice is clicked the other choices disappear.
 
 #### Example
 
@@ -154,10 +155,12 @@ to`\show-reveal` and `\show-replace`. The only difference is that when a choice 
 \choices {
 \choice-reveal(win) { Pick heads }
 \choice-replace(lose) { Pick tails }
+\choice-nav(doNothing) { Do nothing }
 }}
 
 \section(win) { You win! }
 \section(lose) { You lose! }
+\section(doNothing { This option disappears when you pick heads or tails }
 ```
 
 ### Input

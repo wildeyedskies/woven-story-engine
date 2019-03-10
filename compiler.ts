@@ -67,6 +67,16 @@ function lexChoices(input: string, i: number, lastNode: Tag): number {
         // skip to the next open bracket
         return input.indexOf('{', i)
     }
+    else if (input.startsWith('\\choice-nav', i)) {
+        let text = input.slice(i).match(/\\choice-nav\s?\([^\n)]+\)\s*/)[0]
+        if (text == null) throw `Invalid \\choice-nav expression at ${i}`
+
+        let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
+        lastNode.children.push(new Navigate(args[0], args.slice(1), lastNode))
+
+        // skip to the next open bracket
+        return input.indexOf('{', i)
+    }
     else if (input.startsWith('\\choice', i)) {
         let text = input.slice(i).match(/\\choice\s?\([^\n)]+\)\s*/)[0]
         if (text == null) throw `Invalid \\choice expression at ${i}`
