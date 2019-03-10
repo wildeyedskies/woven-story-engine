@@ -107,6 +107,8 @@ function lexRoot(input: string, i: number, lastNode: Tag): number {
         let text = input.slice(i, input.indexOf(')', i) + 1)
         let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
         lastNode.children.push(new Section(args[0], args.slice(1), [], lastNode))
+        // add the section name to the section names list
+        sectionNames.push(args[0])
         
         // update our index to after the section text
         return input.indexOf(')', i) + 1
@@ -337,6 +339,12 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
     }
 }
 
+// Note: this can only be called once lexing is complete and the sectionNames list is populated
+function checkSectionName(name: string) {
+    if (!sectionNames.includes(name)) {
+        throw `Section name ${name} is not defined`
+    }
+}
 
 // 2 types of processing
 //   1. process node itself
@@ -441,7 +449,11 @@ class Else {
 
 class Section {
     constructor(public name: string, public args: string[], 
-                public variables: string[], public parent: Tag) {}
+                public variables: string[], public parent: Tag) {
+        if (!isNaN(Number(this.name[0]))) {
+            throw `Invalid section name ${name}. Section names cannot begin with a number`
+        }
+    }
     
     public children: Tag[] = []
     public style?: string[] = []
@@ -467,6 +479,7 @@ class Include {
 
 
                 process(): string {
+                    checkSectionName(this.name)
                     // we want the template string to execute the included section function when the 
                     // including section's function is called
                     return `\${${this.name}(${this.args.join(',')})}`
@@ -480,6 +493,7 @@ class Navigate {
                 public children: Tag[] = []
 
                 process(): string {
+                    checkSectionName(this.name)
                     let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
                     return `<a onclick="navigate(${this.name}, [${this.args.join(',')}])">${content}</a>`
                 }
@@ -492,6 +506,7 @@ class Show {
                 public children: Tag[] = []
 
                 process(): string {
+                    checkSectionName(this.name)
                     let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
                     return `<a onclick="show(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
                 }
@@ -547,6 +562,7 @@ class Choice {
     public children: Tag[] = []
 
     process(): string {
+        checkSectionName(this.name)
         let content = this.children.map(n => n.process()).reduce((acc, n) => acc + n, '')
         return `<a onclick="choice(this, ${this.name}, [${this.args.join(',')}], ${this.preserveLinkText})">${content}</a>`
     }
@@ -574,6 +590,8 @@ class Root {
 
 let root = new Root();
 let lastNode = root
+// keep a list of the section names to check against for invalid section names
+let sectionNames: string[] = []
 
 export class Output {
     constructor(public content: string, public title: string) {}
