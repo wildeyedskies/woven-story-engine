@@ -11,12 +11,18 @@ function lex(input: string): Tag {
     while (i < input.length) {
         // things that always get handled the same happen here
         if (input[i] === '{') {
-           if (lastNode.children.length < 1) throw "Cannot begin block. Your brackets are likely unbalanced"
-           if (lastNode.children[lastNode.children.length -1].children == null) throw "Invalid { following a terminal symbol"
+           if (lastNode.children.length < 1) { throw "Cannot begin block. Your brackets are likely unbalanced" }
+           if (lastNode.children[lastNode.children.length -1].children == null) { throw "Invalid { following a terminal symbol" }
            lastNode = lastNode.children[lastNode.children.length -1]
            i++
         } else if (input[i] === '}') {
-            if (lastNode instanceof Text) "Cannot end block. Your brackets are likely unbalanced"
+            if (lastNode instanceof Text) {
+                errorNear(input, i)
+                throw "Cannot end block. Your brackets are likely unbalanced" 
+            }
+            if (lastNode instanceof Root) {
+                errorNear(input, i)
+                throw "Cannot have } outside a block. Your brackets are likely unbalanced" }
             lastNode = lastNode['parent']
             i++
         } else {
@@ -35,7 +41,6 @@ function lex(input: string): Tag {
                     'BF': lexBlock,
                     'EM': lexBlock,
             }
-
             if (!Object.keys(lexmap).includes(lastNode.constructor.name)) throw `Cannot add block after ${lastNode.constructor.name}`
             i = lexmap[lastNode.constructor.name](input, i, lastNode)
         }
@@ -140,7 +145,8 @@ function lexRoot(input: string, i: number, lastNode: Tag): number {
     }
     else if (input.startsWith('\\script', i)) { return lexScript(input, i, lastNode) }
     else if (input.startsWith('\\style', i)) { return lexStyle(input, i, lastNode) }
-    else { throw `Unexpected character ${input[i]}` }
+    else { errorNear(input, i)
+        throw `Unexpected character ${input[i]}` }
 }
 
 function lexScript(input: string, i: number, lastNode: Tag): number {
@@ -344,6 +350,10 @@ function checkSectionName(name: string) {
     if (!sectionNames.includes(name)) {
         throw `Section name ${name} is not defined`
     }
+}
+
+function errorNear(input: string, index: number) {
+console.log(`Error found near ${input.substring(index - 15, index + 15)}`)
 }
 
 // 2 types of processing
