@@ -295,9 +295,15 @@ function lexBlock(input: string, i: number, lastNode: Tag): number {
         else if (input.startsWith('\\image', i)) {
             let text = input.slice(i).match(/\\image\s?\([^\n)]+\)\s*/)[0]
             if (text == null) throw `Invalid \\image expression at ${i}`
-            
             let args = text.slice(text.indexOf('(') + 1, text.indexOf(')')).split(',').map(i => i.trim())
             lastNode.children.push(new Image(args[0], args[1], args[2], args[3], lastNode))
+
+            let node: Tag = lastNode
+            while (!(node instanceof Root)) { node = node.parent }
+            // we list image urls on the root node so we can preload them.
+            if (!(node as Root).images.includes(args[0])) {
+                (node as Root).images.push(args[0])
+            }
 
             //NOTE we return a different value if we have a print statement because image statements don't have { }
             return input.indexOf(')',i) + 1
@@ -353,7 +359,7 @@ function checkSectionName(name: string) {
 }
 
 function errorNear(input: string, index: number) {
-console.log(`Error found near ${input.substring(index - 15, index + 15)}`)
+    console.log(`Error found near ${input.substring(index - 15, index + 15)}`)
 }
 
 // 2 types of processing
@@ -373,7 +379,7 @@ class Text {
 
     public children: Tag[] = null
 
-    process(): string { return this.text }
+    process(): string { return this.text.replace(/^\n+/, '') }
 }
 
 class LineBreak {
@@ -586,6 +592,7 @@ class Root {
     public variables?: string[] = []
     public style?: string[] = []
     public script?: string[] = []
+    public images?: string[] = []
 
     process(): string {
         let stylecode = ''
@@ -594,6 +601,7 @@ class Root {
             stylecode = `addStyle('${style}')`
         }
         return this.variables.join(';') + ';' + this.script.join(';') + ';' + stylecode + ';' +
+            ';preloadImages([' + this.images.map(i => `'${i}'`).join(',') + ']);' +
             this.children.map(n => n.process()).reduce((acc, n) => acc + n + '\n', '')
     }
 }

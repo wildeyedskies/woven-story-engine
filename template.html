@@ -156,6 +156,10 @@ function addStyle(style) {
     document.getElementsByTagName('head')[0].appendChild(e)
 }
 
+function preloadImages(imageURLs) {
+    imageURLs.forEach(url => { let i = new Image(); i.src = url; })
+}
+
 navigate(main, [])
 
 </script>
