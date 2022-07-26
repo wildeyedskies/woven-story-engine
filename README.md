@@ -222,7 +222,7 @@ section becomes visible. Using `\script` outside of a section block will cause t
 
 ```
 \script {
-console.log('hello world!')
+console.log('hell world!')
 }
 ```
 
